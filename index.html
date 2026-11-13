@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <title>Portfólio 2026 — Giovanni</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: #000;
+      overflow: hidden;
+    }
+    .deck {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .deck::-webkit-scrollbar { display: none; }
+
+    .slide {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      scroll-snap-align: center;
+      scroll-snap-stop: always;
+      overflow: hidden;
+    }
+    /* Palco fixo 16:9 (1920x1080): todas as imagens são encaixadas neste layout. */
+    .frame {
+      display: grid;
+      place-items: center;
+      width: min(100vw, calc(100vh * 16 / 9));
+      width: min(100vw, calc(100dvh * 16 / 9));
+      aspect-ratio: 16 / 9;
+      max-width: 100vw;
+      max-height: 100vh;
+      max-height: 100dvh;
+      overflow: hidden;
+      background: #000;
+      transform-origin: center center;
+      will-change: transform, opacity, filter;
+      backface-visibility: hidden;
+    }
+    .frame img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      user-select: none;
+      -webkit-user-drag: none;
+      will-change: transform;
+      opacity: .999;
+      transition: opacity .25s ease;
+    }
+    .frame img.pending { opacity: 0; }
+    .frame video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+    .frame video::-webkit-media-controls-panel { background: rgba(0, 0, 0, .6); }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Índice no canto superior esquerdo */
+    .index-nav {
+      position: fixed;
+      top: clamp(14px, 1.6vw, 24px);
+      left: clamp(14px, 1.6vw, 24px);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      pointer-events: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .menu-toggle {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #ff4a17;
+      cursor: pointer;
+      pointer-events: auto;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .85)) drop-shadow(0 0 1px rgba(0, 0, 0, .65));
+    }
+    .menu-toggle:focus-visible { outline: 1px solid #ff4a17; outline-offset: 4px; }
+    .menu-toggle-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      width: 22px;
+    }
+    .menu-toggle-bars span {
+      display: block;
+      height: 2px;
+      border-radius: 2px;
+      background: currentColor;
+      transition: transform .25s ease, opacity .2s ease;
+    }
+    .index-nav.is-open .menu-toggle-bars span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .index-nav.is-open .menu-toggle-bars span:nth-child(2) { opacity: 0; }
+    .index-nav.is-open .menu-toggle-bars span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .index-list {
+      display: none;
+      flex-direction: column;
+      gap: clamp(14px, 2.2vh, 24px);
+    }
+    .index-nav.is-open .index-list,
+    .index-nav.is-closing .index-list { display: flex; }
+    @keyframes menu-item-drop {
+      from {
+        opacity: 0;
+        transform: translateY(-18px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    @keyframes menu-item-return {
+      from {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(-18px);
+      }
+    }
+    .index-nav.is-open .index-item {
+      animation: menu-item-drop .68s cubic-bezier(.16, .84, .32, 1) backwards;
+      animation-delay: var(--menu-delay, 0s);
+    }
+    /* Depois da entrada, remove o transform residual para o texto não desfocar ao rolar. */
+    .index-nav.is-settled .index-item { animation: none; }
+    .index-nav.is-closing .index-item {
+      pointer-events: none;
+      animation: menu-item-return .68s cubic-bezier(.16, .84, .32, 1) both;
+      animation-delay: var(--menu-close-delay, 0s);
+    }
+    .index-item {
+      position: relative;
+      pointer-events: auto;
+      appearance: none;
+      background: none;
+      border: 0;
+      padding: 0;
+      margin: 0;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: clamp(9px, .62vw, 11px);
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: .06em;
+      text-align: left;
+      white-space: nowrap;
+      color: rgba(255, 255, 255, .72);
+      text-shadow:
+        0 0 1px rgba(0, 0, 0, .95),
+        0 1px 3px rgba(0, 0, 0, .85);
+      cursor: pointer;
+      transition: color .25s ease;
+    }
+    .index-item:hover,
+    .index-item:focus-visible { color: #ff4a17; outline: none; }
+    .index-item.is-active { color: #ff4a17; }
+    .index-item.is-active::before {
+      content: "";
+      position: absolute;
+      left: -12px;
+      top: 50%;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #ff4a17;
+      transform: translateY(-50%);
+      box-shadow: 0 0 8px rgba(255, 74, 23, .85);
+    }
+    .index-item small {
+      display: block;
+      margin-top: 2px;
+      font-size: .8em;
+      font-weight: 500;
+      letter-spacing: .02em;
+      color: rgba(255, 255, 255, .45);
+    }
+    .index-item.is-active small { color: rgba(255, 74, 23, .85); }
+
+    /* Slides claros: texto escuro para manter a leitura */
+    .index-nav.is-on-light .index-item {
+      color: rgba(12, 12, 12, .72);
+      text-shadow: 0 0 1px rgba(255, 255, 255, .9), 0 1px 3px rgba(255, 255, 255, .7);
+    }
+    .index-nav.is-on-light .index-item:hover,
+    .index-nav.is-on-light .index-item:focus-visible { color: #d93a0b; }
+    .index-nav.is-on-light .index-item.is-active { color: #d93a0b; }
+    .index-nav.is-on-light .index-item.is-active::before {
+      background: #d93a0b;
+      box-shadow: none;
+    }
+    .index-nav.is-on-light .index-item small { color: rgba(12, 12, 12, .5); }
+    .index-nav.is-on-light .index-item.is-active small { color: rgba(217, 58, 11, .9); }
+
+    /* Contato: WhatsApp e e-mail abrem direto no destino */
+    .contact-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-top: 2px;
+    }
+    .contact-panel[hidden] { display: none; }
+    .contact-panel:not([hidden]) .contact-link {
+      animation: menu-item-drop .55s cubic-bezier(.16, .84, .32, 1) backwards;
+    }
+    .contact-panel.is-settled .contact-link { animation: none; }
+    .contact-panel:not([hidden]) .contact-link:nth-child(2) { animation-delay: .08s; }
+    .index-nav.is-closing .contact-panel:not([hidden]) .contact-link {
+      pointer-events: none;
+      animation: menu-item-return .55s cubic-bezier(.16, .84, .32, 1) both;
+    }
+    .index-nav.is-closing .contact-panel:not([hidden]) .contact-link:nth-child(2) {
+      animation-delay: .08s;
+    }
+    .contact-link {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      pointer-events: auto;
+      color: rgba(255, 255, 255, .72);
+      text-decoration: none;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: .03em;
+      text-shadow: 0 0 1px rgba(0, 0, 0, .95), 0 1px 3px rgba(0, 0, 0, .8);
+      transition: color .2s ease;
+    }
+    .contact-link:hover,
+    .contact-link:focus-visible { color: #ff4a17; outline: none; }
+    .contact-link svg { width: 13px; height: 13px; flex: none; color: #ff4a17; }
+    .index-nav.is-on-light .contact-link {
+      color: rgba(12, 12, 12, .72);
+      text-shadow: 0 0 1px rgba(255, 255, 255, .9), 0 1px 3px rgba(255, 255, 255, .7);
+    }
+    .index-nav.is-on-light .contact-link:hover,
+    .index-nav.is-on-light .contact-link:focus-visible { color: #d93a0b; }
+    .index-nav.is-on-light .contact-link svg { color: #d93a0b; }
+
+    /* Botão voltar ao início (fixo na lateral) */
+    .to-start {
+      position: fixed;
+      right: clamp(16px, 2vw, 38px);
+      top: 50%;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      appearance: none;
+      background: none;
+      border: 0;
+      padding: 0;
+      color: rgba(255, 255, 255, .75);
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-50%) translateX(10px);
+      transition: opacity .4s ease, transform .4s ease, color .25s ease;
+    }
+    .to-start.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(-50%) translateX(0);
+    }
+    .to-start:hover { color: #fff; }
+    .to-start-circle {
+      display: grid;
+      place-items: center;
+      width: 46px;
+      height: 46px;
+      border: 1px solid rgba(255, 255, 255, .55);
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .5);
+      backdrop-filter: blur(6px);
+      transition: border-color .25s ease, background .25s ease;
+    }
+    .to-start:hover .to-start-circle {
+      border-color: #ff4a17;
+      background: rgba(0, 0, 0, .68);
+    }
+    .to-start-circle svg { display: block; width: 18px; height: 18px; }
+    .to-start-label {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .frame img { transition: none; }
+      .index-item,
+      .menu-toggle-bars span,
+      .to-start { transition: none; }
+      .index-nav.is-open .index-item,
+      .index-nav.is-closing .index-item,
+      .contact-panel:not([hidden]) .contact-link,
+      .index-nav.is-closing .contact-panel:not([hidden]) .contact-link { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" id="deck" aria-label="Apresentação do portfólio"></main>
+  <span class="sr-only" id="liveStatus" aria-live="polite"></span>
+
+  <script>
+    (() => {
+      const deck = document.getElementById("deck");
+      const liveStatus = document.getElementById("liveStatus");
+      const assetUrl = (filename) => encodeURIComponent(filename).replace(/%2F/g, "/");
+      const VERSION = "2026-11-12f";
+      const imageUrl = (filename) => `${assetUrl(filename)}?v=${VERSION}`;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+      // Ordem de exibição:
+      // 1..5, 9,10,11,38, 6..8, 36, 12..25, 37, 26..35
+      const sequence = [];
+      for (let i = 1; i <= 5; i++) sequence.push(i);
+      sequence.push(9, 10, 11, 38);
+      for (let i = 6; i <= 8; i++) sequence.push(i);
+      sequence.push(36);
+      for (let i = 12; i <= 25; i++) sequence.push(i);
+      sequence.push(37);
+      for (let i = 26; i <= 35; i++) sequence.push(i);
+
+      const total = sequence.length;
+
+      // Sessões com o canto esquerdo claro: o menu troca para texto escuro.
+      const darkTextSessions = new Set([7, 8, 13, 18, 29, 36]);
+
+      // Sessões 15 e 38 estão em .webp; as demais são .png.
+      const customFiles = new Map([[15, "sessão 15.webp"], [38, "sessão 38.webp"]]);
+
+      const videoObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          const video = entry.target.querySelector("video");
+          if (!video) return;
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.6 && !reducedMotion.matches) {
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        });
+      }, { root: deck, threshold: [0.6] });
+
+      sequence.forEach((number, index) => {
+        const section = document.createElement("section");
+        section.className = "slide";
+        section.dataset.index = String(index);
+        section.dataset.navTheme = darkTextSessions.has(number) ? "dark-text" : "light-text";
+        section.setAttribute("aria-label", `Slide ${index + 1} de ${total}`);
+
+        const frame = document.createElement("div");
+        frame.className = "frame";
+
+        if (number === "video05") {
+          section.setAttribute("aria-label", `Slide ${index + 1} de ${total}: Show case 05`);
+          const video = document.createElement("video");
+          video.src = imageUrl("show case 05.mp4");
+          video.controls = true;
+          video.playsInline = true;
+          video.muted = true;
+          video.preload = "metadata";
+          video.setAttribute("aria-label", "Show case 05");
+          frame.append(video);
+          section.append(frame);
+          deck.append(section);
+          videoObserver.observe(section);
+          return;
+        }
+
+        const img = document.createElement("img");
+        img.src = imageUrl(customFiles.get(number) || `sessão ${number}.png`);
+        img.alt = `Sessão ${number} do portfólio`;
+        img.draggable = false;
+        img.decoding = "async";
+        if (index > 2) img.loading = "lazy";
+        img.classList.add("pending");
+        img.addEventListener("load", () => img.classList.remove("pending"), { once: true });
+        if (img.complete) img.classList.remove("pending");
+
+        frame.append(img);
+        section.append(frame);
+        deck.append(section);
+      });
+
+      const sections = Array.from(deck.querySelectorAll(".slide"));
+      let activeIndex = 0;
+
+      // Menu lateral: cada nome leva ao slide onde aquela seção começa.
+      const menu = [
+        { label: "Sobre mim", index: 1 },
+        { label: "Experiências", index: 2 },
+        { label: "Brand", index: 4 },
+        { label: "Design digital", index: 17 },
+        { label: "Social media", index: 23 },
+        { label: "Arte final", index: 28 },
+        { label: "Logofólio", index: 33 },
+        { label: "Soluções", index: 35 },
+        { label: "Contato", index: 37, contact: true }
+      ];
+
+      const nav = document.createElement("nav");
+      nav.className = "index-nav";
+      nav.setAttribute("aria-label", "Menu do portfólio");
+
+      const menuToggle = document.createElement("button");
+      menuToggle.type = "button";
+      menuToggle.className = "menu-toggle";
+      menuToggle.setAttribute("aria-label", "Abrir menu");
+      menuToggle.setAttribute("aria-expanded", "false");
+      menuToggle.setAttribute("aria-controls", "indexList");
+      menuToggle.innerHTML = `
+        <span class="menu-toggle-bars" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+      `;
+
+      const navList = document.createElement("div");
+      navList.className = "index-list";
+      navList.id = "indexList";
+      const navItems = [];
+
+      let menuCloseTimer = null;
+      let menuSettleTimer = null;
+
+      function resetContactPanel() {
+        const panel = navList.querySelector(".contact-panel");
+        const contactButton = navList.querySelector('[aria-controls="contactPanel"]');
+        if (panel) panel.hidden = true;
+        if (contactButton) contactButton.setAttribute("aria-expanded", "false");
+      }
+
+      function setMenuOpen(open) {
+        clearTimeout(menuCloseTimer);
+        clearTimeout(menuSettleTimer);
+        nav.classList.remove("is-settled");
+        if (open) {
+          nav.classList.remove("is-closing");
+          nav.classList.add("is-open");
+          menuToggle.setAttribute("aria-expanded", "true");
+          menuToggle.setAttribute("aria-label", "Fechar menu");
+          resetContactPanel();
+          menuSettleTimer = setTimeout(() => {
+            if (nav.classList.contains("is-open")) nav.classList.add("is-settled");
+          }, (navItems.length - 1) * 80 + 760);
+          return;
+        }
+        if (!nav.classList.contains("is-open")) return;
+        nav.classList.remove("is-open");
+        menuToggle.setAttribute("aria-expanded", "false");
+        menuToggle.setAttribute("aria-label", "Abrir menu");
+        if (reducedMotion.matches) {
+          resetContactPanel();
+          return;
+        }
+        nav.classList.add("is-closing");
+        menuCloseTimer = setTimeout(() => {
+          nav.classList.remove("is-closing");
+          resetContactPanel();
+        }, (navItems.length - 1) * 80 + 700);
+      }
+
+      menuToggle.addEventListener("click", () => {
+        setMenuOpen(!nav.classList.contains("is-open"));
+      });
+
+      menu.forEach((entry) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "index-item";
+        button.style.setProperty("--menu-delay", `${navItems.length * 0.08}s`);
+        button.style.setProperty("--menu-close-delay", `${(menu.length - 1 - navItems.length) * 0.08}s`);
+        button.append(document.createTextNode(entry.label));
+        if (entry.note) {
+          const note = document.createElement("small");
+          note.textContent = entry.note;
+          button.append(note);
+        }
+
+        if (entry.contact) {
+          const panel = document.createElement("div");
+          panel.className = "contact-panel";
+          panel.id = "contactPanel";
+          panel.hidden = true;
+          panel.innerHTML = `
+            <a class="contact-link" href="https://wa.me/5531986053039" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2a9.9 9.9 0 0 0-8.4 15.15L2 22l4.98-1.6A9.9 9.9 0 1 0 12.04 2Zm0 18.1a8.1 8.1 0 0 1-4.13-1.14l-.3-.18-2.95.95.96-2.87-.2-.31A8.1 8.1 0 1 1 12.04 20.1Zm4.45-6.07c-.24-.12-1.44-.71-1.66-.79-.22-.08-.38-.12-.54.12-.16.24-.62.79-.76.95-.14.16-.28.18-.52.06-.24-.12-1.02-.38-1.94-1.2-.72-.64-1.2-1.43-1.34-1.67-.14-.24-.02-.37.1-.49.1-.1.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.47-.4-.4-.54-.4h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.7 2.6 4.12 3.64.58.25 1.03.4 1.38.51.58.18 1.1.16 1.52.1.46-.07 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28Z"/></svg>
+              <span>WhatsApp</span>
+            </a>
+            <a class="contact-link" href="mailto:giovanimaierdesigner@hotmail.com">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+              <span>E-mail</span>
+            </a>
+          `;
+          button.setAttribute("aria-expanded", "false");
+          button.setAttribute("aria-controls", "contactPanel");
+          button.setAttribute("aria-haspopup", "true");
+          let contactSettleTimer = null;
+          button.addEventListener("click", () => {
+            const open = panel.hidden;
+            panel.hidden = !open;
+            button.setAttribute("aria-expanded", String(open));
+            clearTimeout(contactSettleTimer);
+            panel.classList.remove("is-settled");
+            if (open) {
+              contactSettleTimer = setTimeout(() => {
+                if (!panel.hidden) panel.classList.add("is-settled");
+              }, 700);
+            }
+          });
+          navList.append(button, panel);
+        } else {
+          button.addEventListener("click", () => {
+            setMenuOpen(false);
+            goTo(entry.index);
+          });
+          navList.append(button);
+        }
+        navItems.push(button);
+      });
+
+      nav.append(menuToggle, navList);
+
+      const toStart = document.createElement("button");
+      toStart.type = "button";
+      toStart.className = "to-start";
+      toStart.setAttribute("aria-label", "Voltar ao início");
+      toStart.innerHTML = `
+        <span class="to-start-circle" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 19V5M5 12l7-7 7 7" />
+          </svg>
+        </span>
+        <span class="to-start-label">Início</span>
+      `;
+      toStart.addEventListener("click", () => {
+        deck.scrollTo({ top: 0, behavior: "auto" });
+      });
+
+      document.body.append(nav, toStart);
+
+      // Efeito de transição: profundidade 3D guiada pela rolagem — o slide que
+      // sai inclina, encolhe, desfoca e desvanece; o que entra cresce e ganha nitidez.
+      let effectRaf = null;
+
+      function applyScrollEffect() {
+        effectRaf = null;
+        const height = deck.clientHeight || 1;
+        const position = deck.scrollTop / height;
+
+        sections.forEach((section, index) => {
+          const frame = section.firstElementChild;
+          if (!frame) return;
+
+          if (reducedMotion.matches) {
+            frame.style.transform = "";
+            frame.style.opacity = "";
+            frame.style.filter = "";
+            const media = frame.firstElementChild;
+            if (media && media.tagName === "IMG") media.style.transform = "";
+            return;
+          }
+
+          const delta = index - position;
+          const pose = Math.max(-1, Math.min(1, delta));
+          const distance = Math.abs(pose);
+
+          frame.style.opacity = distance >= 1 ? "0" : Math.max(0, 1 - distance * 1.02).toFixed(3);
+          frame.style.filter = distance > 0.02 && distance < 1
+            ? `blur(${(distance * 13).toFixed(2)}px) brightness(${(1 - distance * 0.45).toFixed(3)})`
+            : "none";
+
+          if (distance < 0.001) {
+            frame.style.transform = "none";
+          } else {
+            const scale = 1 - distance * 0.38;
+            frame.style.transform = [
+              "perspective(1300px)",
+              `translateZ(${(-distance * 170).toFixed(1)}px)`,
+              `rotateX(${(pose * 8).toFixed(2)}deg)`,
+              `rotateZ(${(pose * 3.2).toFixed(2)}deg)`,
+              `scale(${scale.toFixed(4)})`
+            ].join(" ");
+          }
+
+          const media = frame.firstElementChild;
+          if (media && media.tagName === "IMG") {
+            media.style.transform = distance < 0.001
+              ? "none"
+              : `translate3d(0, ${(pose * 10).toFixed(2)}%, 0) scale(${(1 + distance * 0.24).toFixed(3)})`;
+          }
+        });
+      }
+
+      function requestScrollEffect() {
+        if (effectRaf !== null) return;
+        effectRaf = window.requestAnimationFrame(applyScrollEffect);
+      }
+
+      deck.addEventListener("scroll", requestScrollEffect, { passive: true });
+      window.addEventListener("resize", requestScrollEffect);
+      reducedMotion.addEventListener?.("change", requestScrollEffect);
+
+      function currentIndex() {
+        return Math.max(0, Math.min(total - 1, Math.round(deck.scrollTop / deck.clientHeight)));
+      }
+
+      function syncStatus() {
+        const index = currentIndex();
+        if (index !== activeIndex) {
+          activeIndex = index;
+          liveStatus.textContent = `Slide ${index + 1} de ${total}`;
+        }
+
+        let currentSection = -1;
+        menu.forEach((entry, i) => {
+          if (index >= entry.index) currentSection = i;
+        });
+        navItems.forEach((item, i) => {
+          const isActive = i === currentSection;
+          item.classList.toggle("is-active", isActive);
+          if (isActive) item.setAttribute("aria-current", "location");
+          else item.removeAttribute("aria-current");
+        });
+        nav.classList.toggle("is-on-light", sections[index]?.dataset.navTheme === "dark-text");
+        toStart.classList.toggle("is-visible", index >= 1);
+      }
+
+      let scrollTimer = null;
+      deck.addEventListener("scroll", () => {
+        if (scrollTimer) window.clearTimeout(scrollTimer);
+        scrollTimer = window.setTimeout(syncStatus, 80);
+      }, { passive: true });
+
+      function goTo(index) {
+        const target = Math.max(0, Math.min(total - 1, index));
+        sections[target].scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          block: "center"
+        });
+      }
+
+      document.addEventListener("keydown", (event) => {
+        if (event.target instanceof HTMLVideoElement && /^( |ArrowRight|ArrowLeft)$/.test(event.key)) return;
+        if (event.target.closest(".index-nav") && event.key === " ") return;
+        if (event.key === "Escape" && nav.classList.contains("is-open")) {
+          setMenuOpen(false);
+          return;
+        }
+        if (event.key === "ArrowDown" || event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+          event.preventDefault();
+          goTo(currentIndex() + 1);
+        } else if (event.key === "ArrowUp" || event.key === "ArrowLeft" || event.key === "PageUp") {
+          event.preventDefault();
+          goTo(currentIndex() - 1);
+        } else if (event.key === "Home") {
+          event.preventDefault();
+          goTo(0);
+        } else if (event.key === "End") {
+          event.preventDefault();
+          goTo(total - 1);
+        } else if (event.key.toLowerCase() === "f") {
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+          else document.exitFullscreen?.();
+        }
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!event.target.closest(".index-nav") && nav.classList.contains("is-open")) setMenuOpen(false);
+        if (event.target.closest("video")) return;
+        if (event.target.closest(".index-nav, .to-start")) return;
+        goTo(currentIndex() + (event.clientX < window.innerWidth / 2 ? -1 : 1));
+      });
+
+      syncStatus();
+      requestScrollEffect();
+    })();
+  </script>
+</body>
+</html>
