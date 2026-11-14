@@ -350,12 +350,12 @@
       const deck = document.getElementById("deck");
       const liveStatus = document.getElementById("liveStatus");
       const assetUrl = (filename) => encodeURIComponent(filename).replace(/%2F/g, "/");
-      const VERSION = "2026-11-14c";
+      const VERSION = "2026-11-14e";
       const imageUrl = (filename) => `${assetUrl(filename)}?v=${VERSION}`;
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
       // Ordem de exibição:
-      // 1..5, 9,10,11,38, 6..8, 36, 12..25, 37, 26..34, show case, 35
+      // 1..5, 9,10,11,38, 6..8, 36, 12..25, 37, 26..35
       const sequence = [];
       for (let i = 1; i <= 5; i++) sequence.push(i);
       sequence.push(9, 10, 11, 38);
@@ -363,9 +363,7 @@
       sequence.push(36);
       for (let i = 12; i <= 25; i++) sequence.push(i);
       sequence.push(37);
-      for (let i = 26; i <= 34; i++) sequence.push(i);
-      sequence.push("showcase");
-      sequence.push(35);
+      for (let i = 26; i <= 35; i++) sequence.push(i);
 
       const total = sequence.length;
 
@@ -374,18 +372,6 @@
 
       // Sessões 15 e 38 estão em .webp; as demais são .png.
       const customFiles = new Map([[15, "sessão 15.webp"], [38, "sessão 38.webp"]]);
-
-      const videoObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          const video = entry.target.querySelector("video");
-          if (!video) return;
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.6 && !reducedMotion.matches) {
-            video.play().catch(() => {});
-          } else {
-            video.pause();
-          }
-        });
-      }, { root: deck, threshold: [0.6] });
 
       sequence.forEach((number, index) => {
         const section = document.createElement("section");
@@ -396,23 +382,6 @@
 
         const frame = document.createElement("div");
         frame.className = "frame";
-
-        if (number === "showcase") {
-          section.setAttribute("aria-label", `Slide ${index + 1} de ${total}: Show case`);
-          const video = document.createElement("video");
-          video.src = imageUrl("showcase.mp4");
-          video.controls = false;
-          video.loop = true;
-          video.playsInline = true;
-          video.muted = true;
-          video.preload = "metadata";
-          video.setAttribute("aria-label", "Show case");
-          frame.append(video);
-          section.append(frame);
-          deck.append(section);
-          videoObserver.observe(section);
-          return;
-        }
 
         const img = document.createElement("img");
         img.src = imageUrl(customFiles.get(number) || `sessão ${number}.png`);
@@ -442,7 +411,7 @@
         { label: "Arte final", index: 28 },
         { label: "Logofólio", index: 33 },
         { label: "Soluções", index: 35 },
-        { label: "Contato", index: 38, contact: true }
+        { label: "Contato", index: 37, contact: true }
       ];
 
       const nav = document.createElement("nav");
